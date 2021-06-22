@@ -38,7 +38,7 @@ public class Chat {
     public void sendMsg(String msg) throws NullPointerException{
         if(msg == null) throw new NullPointerException();
         byte[] sendBuf = (this.username + ": " + msg).getBytes();
-        //datagrampackey contenete il messaggio da inviare sull'indirizzo di multicast
+        //datagrampacket contenete il messaggio da inviare sull'indirizzo di multicast
         DatagramPacket dpSend = new DatagramPacket(sendBuf, sendBuf.length, this.addr, this.port);
         try{
             this.socket.send(dpSend);

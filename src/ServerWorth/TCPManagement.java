@@ -25,11 +25,13 @@ public class TCPManagement {
 
     public TCPManagement(WorthDB db) throws IOException {
         this.serverDB = db;
+        //creo il selettore
         this.selec = Selector.open();
         this.buff = ByteBuffer.allocate(BUFFER_DIMENSION);
     }
 
     public void start() {
+        //metto in esecuzione il server e lo registro sul selettore, dicendogli che è pronto ad instaurare connessioni
         try(
             ServerSocketChannel server_channel = ServerSocketChannel.open();
         ){
@@ -37,10 +39,12 @@ public class TCPManagement {
             server_channel.configureBlocking(false);
             server_channel.register(selec, SelectionKey.OP_ACCEPT);
             System.out.println("Server running at port " + PORT);
+            //controllo che il server sia attivo
             while(server_channel.isOpen()){
                 selec.select();
                 Set<SelectionKey> selectedKeys = selec.selectedKeys();
                 Iterator<SelectionKey> iterator = selectedKeys.iterator();
+                //itero sui canali registrati al selettore
                 while(iterator.hasNext()){
                     SelectionKey key = iterator.next();
                     iterator.remove();
@@ -48,12 +52,15 @@ public class TCPManagement {
                         if (key.isAcceptable()) this.manageAccept(key);
                         if (key.isReadable()) this.manageRead(key);
                         if (key.isWritable()) this.manageWrite(key);
+                    //il client potrebbe aver interrotto la comunicazione senza fare il logout, verifico
+                    //e se è così forzo il logout del client
                     }catch(IOException e){
                         String error = (new String(((ByteBuffer) key.attachment()).array()));
                         if(error.startsWith("User:")){
                             ArrayList<String> tmp = new ArrayList<>(Arrays.asList(error.split(" ")));
                             this.serverDB.logout(tmp.get(1));
                         }
+                        //client disconnesso, cancello al chiave relativa e chiudo il canale
                         System.out.println("Client disconnected");
                         key.channel().close();
                         key.cancel();
@@ -66,17 +73,30 @@ public class TCPManagement {
         }
     }
 
+    /**
+     * metodo per la gestione dell'instauramento della comunicazione
+     * @param key relativa al canale
+     * @throws IOException
+     */
     private void manageAccept(SelectionKey key) throws IOException {
         ServerSocketChannel server = (ServerSocketChannel) key.channel();
+        //instauro la connessione
         SocketChannel client_channel = server.accept();
         client_channel.configureBlocking(false);
+        //registro il canale per la lettura
         client_channel.register(selec, SelectionKey.OP_READ);
         System.out.println("Accepted new connection with client: " + client_channel.getRemoteAddress());
     }
 
+    /**
+     * metodo per la gestione della lettura da parte del server
+     * @param key relativa al canale
+     * @throws IOException
+     */
     private void manageRead(SelectionKey key) throws IOException {
         SocketChannel c_channel = (SocketChannel) key.channel();
         StringBuilder sb = new StringBuilder();
+        //preparo il buffer e leggo dal client
         buff.clear();
         int bytesRead = c_channel.read(buff);
         buff.flip();
@@ -86,13 +106,16 @@ public class TCPManagement {
         buff.clear();
 
         String msg;
+        //coontrollo se ho letto qualcosa
         if(bytesRead < 0){
             msg = "No message sent from client\n";
             c_channel.close();
         }
         else{
             msg = sb.toString();
+            //parso il messaggio in un array per poter accedere facilmente ai parametri utili
             ArrayList<String> msgParsing = new ArrayList<>(Arrays.asList(msg.split(" ")));
+            //controllo le etichette per identificare il tipo di richiesta inviata dal client
             switch(msgParsing.get(0)){
                 case "LOGIN":
                     try{
@@ -137,7 +160,7 @@ public class TCPManagement {
                 case "CREATEPROJECT":
                     try{
                         if(this.serverDB.createProject(msgParsing.get(1), msgParsing.get(2)))
-                            msg = "User: " + msgParsing.get(2) + "\nProject created: " + msgParsing.get(1);
+                            msg = "User: " + msgParsing.get(2) + " Project created: " + msgParsing.get(1);
                     }
                     catch(IllegalArgumentException e){
                         msg = "Error in createProject";
@@ -146,7 +169,7 @@ public class TCPManagement {
                 case "INSERTMEMBER":
                     try{
                         if(this.serverDB.addMember(msgParsing.get(1), msgParsing.get(2), msgParsing.get(3)))
-                            msg = "User: " + msgParsing.get(2) + " added " + msgParsing.get(3);
+                            msg = "User: " + msgParsing.get(2) + " Added: " + msgParsing.get(3);
                     }
                     catch(IllegalArgumentException | IOException e){
                         msg = "Error in addMember";
@@ -186,7 +209,7 @@ public class TCPManagement {
                 case "INSERTCARD":
                     try{
                         if(this.serverDB.addCard(msgParsing.get(1), msgParsing.get(2), msgParsing.get(3), msgParsing.get(4)))
-                            msg = "User: " + msgParsing.get(4) + " created card " + msgParsing.get(2);
+                            msg = "User: " + msgParsing.get(4) + " Created card: " + msgParsing.get(2);
                     }
                     catch(IllegalArgumentException | NullPointerException | IOException e){
                         e.printStackTrace();
@@ -196,7 +219,7 @@ public class TCPManagement {
                 case "CHANGEPOS":
                     try{
                         if(this.serverDB.moveCard(msgParsing.get(1), msgParsing.get(2), msgParsing.get(3), msgParsing.get(4), msgParsing.get(5)))
-                            msg = "User: " + msgParsing.get(5) + " moved card " + msgParsing.get(2) + " from " + msgParsing.get(3) + " to " + msgParsing.get(4);
+                            msg = "User: " + msgParsing.get(5) + " Moved card: " + msgParsing.get(2) + " from " + msgParsing.get(3) + " to " + msgParsing.get(4);
                         else msg = "Couldn't complete the movement";
                     }
                     catch(IllegalArgumentException | NullPointerException | IOException e){
@@ -236,17 +259,26 @@ public class TCPManagement {
                     break;
             }
         }
+        //quando ho terminato registro il canale per la scrittura, passando il messaggio di risposta come attachment
         c_channel.register(selec, SelectionKey.OP_WRITE, ByteBuffer.wrap(msg.getBytes(StandardCharsets.ISO_8859_1)));
     }
 
+    /**
+     * metodo per la gestione della scrittura da parte del server
+     * @param key relativa al canale
+     * @throws IOException
+     */
     private void manageWrite(SelectionKey key) throws IOException {
         SocketChannel c_channel = (SocketChannel) key.channel();
+        //inizializzo il buffer con il messaggio passato con l'attachment
         ByteBuffer bf = (ByteBuffer) key.attachment();
+        //scrittura
         c_channel.write(bf);
         if(bf.hasRemaining()){
             System.out.println("Error occurred while writing");
             return;
         }
+        //canale pronto per una nuova lettura
         c_channel.register(selec, SelectionKey.OP_READ, key.attachment());
     }
 }
