@@ -571,7 +571,8 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
     private void updateChat(String msg, String prjName) throws IOException {
         MulticastSocket sck = new MulticastSocket();
         //prendo i byte del messaggio
-        byte[] dataToChat = ("WORTH: " + msg).getBytes();
+        String finalMsg = "WORTH: " + msg;
+        byte[] dataToChat = finalMsg.getBytes();
         //datagrampacket per l'invio del messaggio verso l'indirizzo di multicast
         DatagramPacket dp = new DatagramPacket(dataToChat, dataToChat.length, InetAddress.getByName(getChatIP(prjName, "WORTH")), 4500);
         //effettuo l'invio solo se il progetto è aperto

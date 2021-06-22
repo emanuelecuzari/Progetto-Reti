@@ -35,7 +35,7 @@ public class MSGHandler implements  Runnable{
         while(Thread.currentThread().isAlive()){
             try{
                 socket.receive(dp);
-                String msgReceived = new String(dp.getData(), 0, buffer.length);
+                String msgReceived = new String(dp.getData(), 0, dp.getLength());
                 messages.add(msgReceived);
             }
             catch(IOException e){

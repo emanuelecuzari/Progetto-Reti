@@ -227,7 +227,7 @@ public class ClientTasks extends RemoteServer implements Runnable, ClientInterfa
             System.out.println("list_projects -> to show all the projects you are part of");
             System.out.println("create_project projectName -> to create a new project");
             System.out.println("open_project projectName -> to open a project");
-            System.out.println("logout username -> to close your session");
+            System.out.println("logout -> to close your session");
         }
         else{
             System.out.println("Do you need any help " + this.getUsrName() + "?");
@@ -359,7 +359,7 @@ public class ClientTasks extends RemoteServer implements Runnable, ClientInterfa
 
                 if(answer.startsWith("User: " + this.getUsrName())){
                     this.currentProject = prjName;
-                    getIpForChat(prjName);
+                    getIpForChat();
                     this.chat = new Chat(CHAT_PORT, this.getUsrName(), this.chatIP);
                 }
                 //in questo caso contiene un messaggio di errore
@@ -495,7 +495,7 @@ public class ClientTasks extends RemoteServer implements Runnable, ClientInterfa
         this.chat.sendMsg(msg);
     }
 
-    public void getIpForChat(String prjName){
+    public void getIpForChat(){
         String label = "GETCHATIP " + this.getCurrentProject() + " " + this.getUsrName();
         ArrayList<String> tmp;
         if(c_channel.isConnected()){
