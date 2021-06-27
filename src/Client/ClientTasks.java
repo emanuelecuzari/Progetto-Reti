@@ -214,8 +214,14 @@ public class ClientTasks extends RemoteServer implements Runnable, ClientInterfa
                             break;
                         //invio di un messaggio
                         case "send_message":
-                            if(parsedCommand.size() == 2) sendMsgOnChat(parsedCommand.get(1));
-                            else help();
+                            if(parsedCommand.size() == 1) help();
+                            else {
+                                StringBuilder msg = new StringBuilder();
+                                for(String s : parsedCommand.subList(1, parsedCommand.size())){
+                                    msg.append(s).append(" ");
+                                }
+                                sendMsgOnChat(msg.toString());
+                            }
                             break;
                         case "logout":
                             if(parsedCommand.size() == 1) logoutUser();

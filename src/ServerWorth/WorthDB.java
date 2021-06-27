@@ -1,5 +1,6 @@
 package ServerWorth;
 
+import MyExceptions.*;
 import Client.ClientInterface;
 import java.io.IOException;
 import java.net.*;
@@ -162,7 +163,8 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @param passw password con cui l'utente si vuole loggare
      * @return true se l'operazione va a buon fine
      */
-    public synchronized boolean login(String username, String passw) throws IllegalArgumentException, IOException {
+    public synchronized boolean login(String username, String passw) throws IllegalArgumentException, IOException,
+            AlreadyLoggedException, UserNotExistsException, WrongPasswordEXception {
         if(username == null || passw == null || username.equals("") || passw.equals("")){
             throw new IllegalArgumentException("Invalid login");
         }
@@ -171,10 +173,10 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
         for(Utente u : usersList){
             if(username.equals(u.getUsername())){
                 //utente già loggato
-                if(onlineUsers.contains(u.getUsername())) throw new IllegalArgumentException("User " + username + " already logged");
+                if(onlineUsers.contains(u.getUsername())) throw new AlreadyLoggedException("User " + username + " already logged");
                 //password errata
                 if(!passw.equals(u.getPassw())){
-                    throw new IllegalArgumentException("Wrong password");
+                    throw new WrongPasswordEXception("Wrong password");
                 }
                 else{
                     u.setStato("online");
@@ -185,7 +187,7 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
                 }
             }
         }
-        throw new IllegalArgumentException();
+        throw new UserNotExistsException("User doesn't exists");
     }
 
     /**
@@ -218,14 +220,14 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @param username nome dell'utente che esgue l'operazione
      * @return true se l'operazione va a buon fine
      */
-    public boolean openPrj(String prjName, String username) throws NullPointerException, IOException, IllegalArgumentException {
+    public boolean openPrj(String prjName, String username) throws NullPointerException, IOException, IllegalArgumentException, NotMemberException {
         if(prjName == null || username == null) throw new NullPointerException();
         //recupero il progetto
         Progetto prjTmp = getPrj(prjName);
-        if(prjTmp == null) throw new IllegalArgumentException();
+        if(prjTmp == null) throw new NullPointerException();
         //check dei permessi
         if(!prjTmp.getMemberList().contains(username))
-            throw new IllegalArgumentException("Permission denied");
+            throw new NotMemberException("Permission denied");
         if(!openedProjects.contains(prjName)) {
             openedProjects.add(prjName);
         }
@@ -257,11 +259,11 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @return true se l'operazione va a buon fine
      * @throws IOException se occorrono degli errori nella serializzazione
      */
-    public boolean createProject(String name, String username) throws IllegalArgumentException, IOException {
+    public boolean createProject(String name, String username) throws IllegalArgumentException, IOException, ProjectExistingException {
         if(name == null || username == null || name.equals("")) throw new IllegalArgumentException("Invalid project name");
         //controllo che il progetto non esista già
         for(Progetto p : projectsList){
-            if(name.equals(p.getProjectName())) throw new IllegalArgumentException("Name already used");
+            if(name.equals(p.getProjectName())) throw new ProjectExistingException("Name already used");
         }
         Progetto new_p = new Progetto(name, username);
         new_p.setCreator(username);
@@ -280,17 +282,18 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @return true se l'operazione va a buon fine
      * @throws IOException se occorrono dei problemi con la serializzazione
      */
-    public boolean addMember(String prjName, String username, String userToAdd) throws IllegalArgumentException, IOException {
+    public boolean addMember(String prjName, String username, String userToAdd) throws IllegalArgumentException, IOException,
+            NotMemberException, AlreadyMemberException, NotRegisteredException {
         if(prjName == null || username == null || userToAdd == null)
             throw new IllegalArgumentException("Something went wrong");
         /* cehck per permesso */
         Progetto prjTmp = getPrj(prjName);
-        if(prjTmp == null) throw new IllegalArgumentException();
+        if(prjTmp == null) throw new NullPointerException();
         if(!prjTmp.getMemberList().contains(username))
-            throw new IllegalArgumentException("Permission denied");
+            throw new NotMemberException("Permission denied");
         /* check su userToAdd */
         Utente toAdd = getUser(userToAdd);
-        if(toAdd == null) throw new IllegalArgumentException();
+        if(toAdd == null) throw new NullPointerException();
         //controllo che l'utente sia registrato e non sia già membro
         if(usersList.contains(toAdd) && !prjTmp.getMemberList().contains(userToAdd)){
             prjTmp.getMemberList().add(userToAdd);
@@ -299,10 +302,10 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
             return true;
         }
         else if(prjTmp.getMemberList().contains(userToAdd)){
-            throw new IllegalArgumentException("User " + userToAdd + " already a member");
+            throw new AlreadyMemberException("User " + userToAdd + " already a member");
         }
         else{
-            throw new IllegalArgumentException("User " + userToAdd + " not registered");
+            throw new NotRegisteredException("User " + userToAdd + " not registered");
         }
     }
 
@@ -312,13 +315,13 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @param username nome delll'utente che esegue l'operazione
      * @return sb, stringa che contiene i membri (ne conterrà sempre almeno uno, il creator)
      */
-    public String showMembers(String prjName, String username) throws IllegalArgumentException{
+    public String showMembers(String prjName, String username) throws IllegalArgumentException, NotMemberException {
         if(prjName == null || username == null) throw new IllegalArgumentException("Something went wrong");
         /* cehck per permesso */
         Progetto prjTmp = getPrj(prjName);
-        if(prjTmp == null) throw new IllegalArgumentException();
+        if(prjTmp == null) throw new NullPointerException();
         if(!prjTmp.getMemberList().contains(username))
-            throw new IllegalArgumentException("Permission denied");
+            throw new NotMemberException("Permission denied");
         StringBuilder sb = new StringBuilder();
         for(String str : prjTmp.getMemberList()){
             sb.append(str).append("\n");
@@ -332,13 +335,13 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @param username nome delll'utente che esegue l'operazione
      * @return sb, stringa contenete tutte le cards del progetto, o nessuna
      */
-    public String showCards(String prjName, String username) throws IllegalArgumentException{
+    public String showCards(String prjName, String username) throws IllegalArgumentException, NotMemberException {
         if(prjName == null || username == null) throw new IllegalArgumentException("Something went wrong");
         /* cehck per permesso */
         Progetto prjTmp = getPrj(prjName);
-        if(prjTmp == null) throw new IllegalArgumentException();
+        if(prjTmp == null) throw new NullPointerException();
         if(!prjTmp.getMemberList().contains(username))
-            throw new IllegalArgumentException("Permission denied");
+            throw new NotMemberException("Permission denied");
         StringBuilder sb = new StringBuilder();
         for(Card c : prjTmp.getCardTracking()){
             sb.append(c.getName() + "\n");
@@ -353,14 +356,14 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @param username nome delll'utente che esegue l'operazione
      * @return sb, stringa con tutte le info relative alla card
      */
-    public String showCard(String prjName, String cardName, String username) throws NullPointerException, IllegalArgumentException{
+    public String showCard(String prjName, String cardName, String username) throws NullPointerException, IllegalArgumentException, NotMemberException {
         if(prjName == null || cardName == null || username == null)
             throw new NullPointerException();
         /* cehck per permesso */
         Progetto prjTmp = getPrj(prjName);
         if(prjTmp == null) throw new NullPointerException();
         if(!prjTmp.getMemberList().contains(username))
-            throw new IllegalArgumentException("Permission denied");
+            throw new NotMemberException("Permission denied");
         StringBuilder sb = new StringBuilder();
         Card cardTmp = prjTmp.getCard(cardName);
         // check sulla card
@@ -379,14 +382,14 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @return true se l'operazione va a buon fine
      * @throws IOException se occorrono erroi nella serializzazione
      */
-    public boolean addCard(String prjName, String cardName, String descr, String username) throws NullPointerException, IllegalArgumentException, IOException {
+    public boolean addCard(String prjName, String cardName, String descr, String username) throws NullPointerException, IllegalArgumentException, IOException, NotMemberException {
         if(prjName == null || cardName == null || descr == null || username == null)
             throw new NullPointerException();
         /* cehck per permesso */
         Progetto prjTmp = getPrj(prjName);
         if(prjTmp == null) throw new NullPointerException();
         if(!prjTmp.getMemberList().contains(username))
-            throw new IllegalArgumentException("Permission denied");
+            throw new NotMemberException("Permission denied");
         Card tmp = new Card(cardName, descr);
         //controllo che la carta non esista già
         for(Card c : prjTmp.getCardTracking()) {
@@ -410,17 +413,18 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @return true se l'operazione va a buon fine, false altrimenti
      * @throws IOException se occorrono errori nella serializzazione
      */
-    public boolean moveCard(String prjName, String cardName, String src, String dest, String username) throws NullPointerException, IllegalArgumentException, IOException {
+    public boolean moveCard(String prjName, String cardName, String src, String dest, String username) throws NullPointerException, IllegalArgumentException, IOException, NotMemberException {
         if(prjName == null || cardName == null || src == null || dest == null || username == null)
             throw new NullPointerException();
         /* cehck per permesso */
         Progetto prjTmp = getPrj(prjName);
         if(prjTmp == null) throw new NullPointerException();
         if(!prjTmp.getMemberList().contains(username))
-            throw new IllegalArgumentException("Permission denied");
+            throw new NotMemberException("Permission denied");
         Card card = prjTmp.getCard(cardName);
         //check sulla card
         if(card == null) throw new NullPointerException();
+        if(!checkList(src, dest)) throw new IllegalArgumentException();
         //spostamento
         if(prjTmp.getListByName(src).remove(card)){
             prjTmp.getListByName(dest).add(card);
@@ -439,13 +443,13 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @param username nome delll'utente che esegue l'operazione
      * @return sb, sttringa con tutti gli spostamenti
      */
-    public String getCardHistory(String prjName, String cardName, String username) throws NullPointerException, IllegalArgumentException{
+    public String getCardHistory(String prjName, String cardName, String username) throws NullPointerException, IllegalArgumentException, NotMemberException {
         if(prjName == null || cardName == null || username == null) throw new NullPointerException();
         /* cehck per permesso */
         Progetto prjTmp = getPrj(prjName);
         if(prjTmp == null) throw new NullPointerException();
         if(!prjTmp.getMemberList().contains(username))
-            throw new IllegalArgumentException("Permission denied");
+            throw new NotMemberException("Permission denied");
         Card card = prjTmp.getCard(cardName);
         //check sulla card
         if(card == null) throw new NullPointerException();
@@ -466,13 +470,13 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
      * @return true se l'operazione va a buon fine, false altrimenti
      * @throws IOException se occorrono errori nella serializzazione
      */
-    public boolean cancelProject(String prjName, String username) throws NullPointerException, IllegalArgumentException, IOException {
+    public boolean cancelProject(String prjName, String username) throws NullPointerException, IllegalArgumentException, IOException, NotMemberException {
         if(prjName == null || username == null) throw new NullPointerException();
         /* cehck per permesso */
         Progetto prjTmp = getPrj(prjName);
         if(prjTmp == null) throw new NullPointerException();
         if(!prjTmp.getMemberList().contains(username))
-            throw new IllegalArgumentException("Permission denied");
+            throw new NotMemberException("Permission denied");
         //controllo che tutte le carte si trovino nella done list
         if(prjTmp.getCardTracking().size() == prjTmp.getDone_list().size()){
             updateChat("User " + username + " deleted the project", prjName);
@@ -507,6 +511,24 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
                 return u;
         }
         return null;
+    }
+
+    /**
+     * metodo per controllare che gli spostamenti avvengano corretamente
+     * @param src lista di partenza
+     * @param dest lista di arrivo
+     * @return true se lo spostamento va bene, false altrimenti
+     */
+    public boolean checkList(String src, String dest) throws NullPointerException{
+        if(src == null || dest == null) throw new NullPointerException();
+        if(src.equalsIgnoreCase("TODO") && !dest.equalsIgnoreCase("IN_PROGRESS"))
+            return false;
+        if(src.equalsIgnoreCase("IN_PROGRESS") && dest.equalsIgnoreCase("TODO"))
+            return false;
+        if(src.equalsIgnoreCase("TO_BE_REVISED") && dest.equalsIgnoreCase("TODO"))
+            return false;
+        //se la lista di partenza è DONE non va bene, ritorno false; true altrimenti
+        return !src.equalsIgnoreCase("DONE");
     }
 
     /**

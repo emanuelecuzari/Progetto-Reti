@@ -8,8 +8,7 @@ import java.rmi.RemoteException;
 
 /**
  *
- * AccessManagerInterface è la classe che rappresenta l'interfaccia offerta al client per il login
- * o la registrazione a WORTH
+ * RMIServerInterface è la classe che rappresenta l'interfaccia per la registrazione a WORTH
  *
  */
 public interface RMIServerInterface extends Remote {

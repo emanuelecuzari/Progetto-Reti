@@ -1,8 +1,6 @@
 import ServerWorth.WorthDB;
 import java.io.IOException;
 
-import static java.lang.System.exit;
-
 /**
  * classe per far partire l'esecuzione del server
  */

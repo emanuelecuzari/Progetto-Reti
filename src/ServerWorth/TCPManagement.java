@@ -1,5 +1,6 @@
 package ServerWorth;
 
+import MyExceptions.*;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -124,7 +125,8 @@ public class TCPManagement {
                         }
 
                     }
-                    catch(IllegalArgumentException | RemoteException e){
+                    catch(IllegalArgumentException | RemoteException | UserNotExistsException |
+                            AlreadyLoggedException | WrongPasswordEXception e){
                         msg = "Error in login";
                     }
                     break;
@@ -153,7 +155,7 @@ public class TCPManagement {
                         if(this.serverDB.openPrj(msgParsing.get(1), msgParsing.get(2)))
                             msg = "User: " + msgParsing.get(2) + " Project opened: " + msgParsing.get(1);
                     }
-                    catch(NullPointerException | IOException | IllegalArgumentException e){
+                    catch(NullPointerException | IOException | IllegalArgumentException | NotMemberException e){
                         msg = "Error in openPrj";
                     }
                     break;
@@ -162,7 +164,7 @@ public class TCPManagement {
                         if(this.serverDB.createProject(msgParsing.get(1), msgParsing.get(2)))
                             msg = "User: " + msgParsing.get(2) + " Project created: " + msgParsing.get(1);
                     }
-                    catch(IllegalArgumentException e){
+                    catch(IllegalArgumentException | ProjectExistingException e){
                         msg = "Error in createProject";
                     }
                     break;
@@ -171,7 +173,7 @@ public class TCPManagement {
                         if(this.serverDB.addMember(msgParsing.get(1), msgParsing.get(2), msgParsing.get(3)))
                             msg = "User: " + msgParsing.get(2) + " Added: " + msgParsing.get(3);
                     }
-                    catch(IllegalArgumentException | IOException e){
+                    catch(IllegalArgumentException | NotMemberException | AlreadyMemberException | NotRegisteredException e){
                         msg = "Error in addMember";
                     }
                     break;
@@ -181,7 +183,7 @@ public class TCPManagement {
                         if(mList == null || mList.equals("")) msg = "Error in showMembers";
                         msg = "User: " + msgParsing.get(2) + "\n" + mList;
                     }
-                    catch(IllegalArgumentException e){
+                    catch(IllegalArgumentException | NotMemberException e){
                         msg = "Error";
                     }
                     break;
@@ -192,7 +194,7 @@ public class TCPManagement {
                         if(cList.equals("")) msg = "The project " + msgParsing.get(1) + " has no cards";
                         msg = "User: " + msgParsing.get(2) + "\n" + cList;
                     }
-                    catch(IllegalArgumentException e){
+                    catch(IllegalArgumentException | NotMemberException e){
                         msg = "Error";
                     }
                     break;
@@ -202,7 +204,7 @@ public class TCPManagement {
                         if(out == null || out.equals("")) msg = "Error in showCard";
                         msg = "User: " + msgParsing.get(3) + "\n" + out;
                     }
-                    catch(NullPointerException | IllegalArgumentException e){
+                    catch(NullPointerException | IllegalArgumentException | NotMemberException e){
                         msg = "Error";
                     }
                     break;
@@ -211,7 +213,7 @@ public class TCPManagement {
                         if(this.serverDB.addCard(msgParsing.get(1), msgParsing.get(2), msgParsing.get(3), msgParsing.get(4)))
                             msg = "User: " + msgParsing.get(4) + " Created card: " + msgParsing.get(2);
                     }
-                    catch(IllegalArgumentException | NullPointerException | IOException e){
+                    catch(IllegalArgumentException | NullPointerException | IOException | NotMemberException e){
                         e.printStackTrace();
                         msg = "Error in addCard";
                     }
@@ -222,7 +224,7 @@ public class TCPManagement {
                             msg = "User: " + msgParsing.get(5) + " Moved card: " + msgParsing.get(2) + " from " + msgParsing.get(3) + " to " + msgParsing.get(4);
                         else msg = "Couldn't complete the movement";
                     }
-                    catch(IllegalArgumentException | NullPointerException | IOException e){
+                    catch(IllegalArgumentException | NullPointerException | IOException | NotMemberException e){
                         msg = "Error in moveCard";
                     }
                     break;
@@ -232,7 +234,7 @@ public class TCPManagement {
                         if(out == null || out.equals("")) msg = "Error in getCardHistory";
                         msg = "User: " + msgParsing.get(3) + "\n" + "Card: " + msgParsing.get(2) + "\n" + out;
                     }
-                    catch(IllegalArgumentException | NullPointerException e){
+                    catch(IllegalArgumentException | NullPointerException | NotMemberException e){
                         msg = "Error";
                     }
                     break;
@@ -242,7 +244,7 @@ public class TCPManagement {
                             msg = "User: " + msgParsing.get(2) + " Project erased: " + msgParsing.get(1);
                         else msg = "Error in cancelling the project";
                     }
-                    catch(IllegalArgumentException | NullPointerException | IOException e){
+                    catch(IllegalArgumentException | NullPointerException | IOException | NotMemberException e){
                         e.printStackTrace();
                         msg = "Error in cancelProject";
                     }
