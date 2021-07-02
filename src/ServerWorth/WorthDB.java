@@ -541,12 +541,8 @@ public class WorthDB extends RemoteServer implements RMIServerInterface {
         Progetto prjTmp = getPrj(prjName);
         if(prjTmp == null) throw new NullPointerException();
         StringBuilder sb = new StringBuilder();
-        //gli indirizzi multicast vanno da 224.0.0.0 a 239.255.255.255, quindi scelgo randomicamente un numero tra 224 e 239
-        int min = 224;
-        int max = 239;
-        int range = max - min + 1;
-        int rand = (int)(Math.random() * range) + min;
-        sb.append(rand).append(".");
+        //l'IP inizia con 239 per essere sicuri che sia un idnirizzo di multicast e che segua l'Administrative Scope
+        sb.append(239).append(".");
         int r;
         int unique;
         for(int i = 0; i < 3; i++){
